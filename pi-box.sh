@@ -150,5 +150,21 @@ for var in ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY OPENROUTER_API_KEY GR
     fi
 done
 
+# Determine container command arguments
+CMD_ARGS=()
+if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+    if [[ "${EXTRA_ARGS[0]}" == "bash" ]] || [[ "${EXTRA_ARGS[0]}" == "sh" ]] || [[ "${EXTRA_ARGS[0]}" == "pi" ]]; then
+        CMD_ARGS=("${EXTRA_ARGS[@]}")
+    else
+        CMD_ARGS=(pi "${EXTRA_ARGS[@]}")
+    fi
+fi
+
 # Launch interactive container
-exec "$CONTAINER_BIN" run --rm -it --init     "${ENV_ARGS[@]}"     -v "${PI_AGENT_DIR}:/home/node/.pi"     -v "${WORKSPACE_DIR}:/home/node/workspace"     --workdir /home/node/workspace     "$IMAGE_NAME"     "${EXTRA_ARGS[@]}"
+exec "$CONTAINER_BIN" run --rm -it --init \
+    "${ENV_ARGS[@]}" \
+    -v "${PI_AGENT_DIR}:/home/node/.pi" \
+    -v "${WORKSPACE_DIR}:/home/node/workspace" \
+    --workdir /home/node/workspace \
+    "$IMAGE_NAME" \
+    "${CMD_ARGS[@]}"

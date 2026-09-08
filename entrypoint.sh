@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# Normalize command: if arguments are not starting with pi, bash, or sh, prepend pi
+if [ "$#" -eq 0 ]; then
+    set -- pi
+elif [ "$1" = "bash" ] || [ "$1" = "sh" ] || [ "$1" = "/bin/bash" ] || [ "$1" = "/bin/sh" ]; then
+    : # Keep shell command as-is
+elif [ "$1" = "pi" ]; then
+    : # Already explicit pi command
+else
+    set -- pi "$@"
+fi
+
 # Detect if container is running in a rootless user namespace (e.g. Rootless Podman / Rootless Docker)
 # In a rootless user namespace, container UID 0 is already mapped to the host user's UID.
 IS_USERNS=false

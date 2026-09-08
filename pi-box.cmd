@@ -176,6 +176,23 @@ if defined OPENROUTER_API_KEY set "ENV_FLAGS=!ENV_FLAGS! -e OPENROUTER_API_KEY"
 if defined GROQ_API_KEY set "ENV_FLAGS=!ENV_FLAGS! -e GROQ_API_KEY"
 if defined MISTRAL_API_KEY set "ENV_FLAGS=!ENV_FLAGS! -e MISTRAL_API_KEY"
 
+:: Determine container command arguments
+set "CMD_ARGS="
+if defined EXTRA_ARGS (
+    for /f "tokens=1*" %%a in ("!EXTRA_ARGS!") do (
+        set "FIRST_TOKEN=%%a"
+        if /i "!FIRST_TOKEN!"=="bash" (
+            set "CMD_ARGS=!EXTRA_ARGS!"
+        ) else if /i "!FIRST_TOKEN!"=="sh" (
+            set "CMD_ARGS=!EXTRA_ARGS!"
+        ) else if /i "!FIRST_TOKEN!"=="pi" (
+            set "CMD_ARGS=!EXTRA_ARGS!"
+        ) else (
+            set "CMD_ARGS=pi !EXTRA_ARGS!"
+        )
+    )
+)
+
 :: Run interactive container
 %CONTAINER_BIN% run --rm -it --init ^
     !ENV_FLAGS! ^
@@ -183,7 +200,7 @@ if defined MISTRAL_API_KEY set "ENV_FLAGS=!ENV_FLAGS! -e MISTRAL_API_KEY"
     -v "%WORKSPACE_DIR%:/home/node/workspace" ^
     --workdir /home/node/workspace ^
     "%IMAGE_NAME%" ^
-    !EXTRA_ARGS!
+    !CMD_ARGS!
 
 exit /b %errorlevel%
 

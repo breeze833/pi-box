@@ -99,16 +99,21 @@ To build or rebuild the container image locally from `Dockerfile` instead of usi
 pi-box.cmd --build
 ```
 
-### Pass Additional CLI Arguments to Pi
+### Pass Subcommands & Arguments to Pi
 
-Any additional arguments passed after `--` are forwarded directly to the `pi` command:
+Any additional arguments or subcommands are forwarded directly to `pi`:
 
 ```bash
-# Print Pi version
-./pi-box.sh -- --version
+# Install an extension into .pi
+./pi-box.sh install npm:pi-localllm-provider
+# or on Windows:
+pi-box.cmd install npm:pi-localllm-provider
 
-# Run with custom flags or print mode
-./pi-box.sh -- --help
+# Print Pi version
+./pi-box.sh --version
+
+# Open an interactive bash shell inside the container
+./pi-box.sh bash
 ```
 
 ---
