@@ -96,6 +96,16 @@ WORKSPACE_DIR="${WORKDIR}/workspace"
 # Ensure subfolders exist
 mkdir -p "$PI_AGENT_DIR" "$WORKSPACE_DIR"
 
+# Check if existing directories have permission issues from a previous run
+if [[ ! -w "$PI_AGENT_DIR" ]] || [[ ! -w "$WORKSPACE_DIR" ]]; then
+    echo "Warning: Persistent directories are not writable by your user ($(id -un))." >&2
+    echo "This usually happens if a previous container run modified their host ownership." >&2
+    echo "To restore ownership on the host, run:" >&2
+    echo "  podman unshare chown -R 0:0 '$PI_AGENT_DIR' '$WORKSPACE_DIR'" >&2
+    echo "  (or: sudo chown -R $(id -u):$(id -g) '$PI_AGENT_DIR' '$WORKSPACE_DIR')" >&2
+    echo "" >&2
+fi
+
 # Check if image exists locally
 IMAGE_EXISTS=false
 if "$CONTAINER_BIN" image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
