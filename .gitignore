@@ -1,0 +1,16 @@
+# pi-box persistent state and workspace (do not commit user code or tokens)
+pi-agent/
+workspace/
+
+# Environment files with secrets/keys
+.env
+.env.local
+*.env
+
+# Operating System and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
