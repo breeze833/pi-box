@@ -5,7 +5,8 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 set "WORKDIR=%CD%"
 set "FORCE_BUILD=0"
-set "IMAGE_NAME=pi-box:latest"
+set "FORCE_PULL=0"
+set "IMAGE_NAME=ghcr.io/breeze833/pi-box:latest"
 if defined PI_BOX_IMAGE set "IMAGE_NAME=%PI_BOX_IMAGE%"
 
 :: Parse CLI arguments
@@ -34,6 +35,17 @@ if /i "%~1"=="--workdir" (
     )
     set "WORKDIR=%~f2"
     shift
+    shift
+    goto parse_args
+)
+
+if /i "%~1"=="-p" (
+    set "FORCE_PULL=1"
+    shift
+    goto parse_args
+)
+if /i "%~1"=="--pull" (
+    set "FORCE_PULL=1"
     shift
     goto parse_args
 )
@@ -116,25 +128,34 @@ set "WORKSPACE_DIR=%WORKDIR%\workspace"
 if not exist "%PI_AGENT_DIR%" mkdir "%PI_AGENT_DIR%"
 if not exist "%WORKSPACE_DIR%" mkdir "%WORKSPACE_DIR%"
 
-:: Check if image exists
+:: Check if image exists locally
 set "IMAGE_EXISTS=0"
 %CONTAINER_BIN% image inspect "%IMAGE_NAME%" >nul 2>&1
 if !errorlevel! equ 0 set "IMAGE_EXISTS=1"
 
-:: Build image if needed
+:: Build, pull, or auto-fetch image
 if "%FORCE_BUILD%"=="1" (
-    set "NEED_BUILD=1"
-) else if "%IMAGE_EXISTS%"=="0" (
-    set "NEED_BUILD=1"
-) else (
-    set "NEED_BUILD=0"
-)
-
-if "%NEED_BUILD%"=="1" (
     echo Building container image '%IMAGE_NAME%' from '%SCRIPT_DIR%'...
     %CONTAINER_BIN% build -t "%IMAGE_NAME%" -f "%SCRIPT_DIR%Dockerfile" "%SCRIPT_DIR%"
     if !errorlevel! neq 0 (
         echo Error: Failed to build image '%IMAGE_NAME%'. >&2
+        exit /b !errorlevel!
+    )
+) else if "%FORCE_PULL%"=="1" (
+    echo Pulling latest container image '%IMAGE_NAME%' from registry...
+    %CONTAINER_BIN% pull "%IMAGE_NAME%"
+    if !errorlevel! neq 0 (
+        echo Error: Failed to pull image '%IMAGE_NAME%'. >&2
+        exit /b !errorlevel!
+    )
+) else if "%IMAGE_EXISTS%"=="0" (
+    echo Image '%IMAGE_NAME%' not found locally. Pulling from registry...
+    %CONTAINER_BIN% pull "%IMAGE_NAME%"
+    if !errorlevel! neq 0 (
+        echo Error: Failed to pull image '%IMAGE_NAME%' from registry. >&2
+        if exist "%SCRIPT_DIR%Dockerfile" (
+            echo Tip: You can build it locally using: pi-box.cmd --build >&2
+        )
         exit /b !errorlevel!
     )
 )
@@ -143,7 +164,7 @@ if "%NEED_BUILD%"=="1" (
 set "ENV_FLAGS=-e HOST_UID=1000 -e HOST_GID=1000 -e TERM=xterm-256color"
 
 if exist "%WORKDIR%\.env" (
-    set "ENV_FLAGS=!ENV_FLAGS! --env-file "%WORKDIR%\.env""
+    set "ENV_FLAGS=!ENV_FLAGS! --env-file \"%WORKDIR%\.env\""
 ) else if exist "%SCRIPT_DIR%.env" (
     set "ENV_FLAGS=!ENV_FLAGS! --env-file "%SCRIPT_DIR%.env""
 )
@@ -175,8 +196,9 @@ echo.
 echo Options:
 echo   -w, --workdir ^<DIR^>    Set persistent directory scope containing "pi-agent" and "workspace"
 echo                          (default: current working directory)
-echo   -b, --build             Build or rebuild the container image before running
-echo   -i, --image ^<NAME^>     Custom container image name (default: pi-box:latest)
+echo   -p, --pull              Pull the latest container image from registry
+echo   -b, --build             Build container image locally from Dockerfile
+echo   -i, --image ^<NAME^>     Custom container image name (default: ghcr.io/breeze833/pi-box:latest)
 echo   -h, --help              Show this help message and exit
 echo.
 echo Environment Variables:

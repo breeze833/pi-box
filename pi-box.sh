@@ -7,7 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Defaults
 WORKDIR="$PWD"
 FORCE_BUILD=false
-IMAGE_NAME="${PI_BOX_IMAGE:-pi-box:latest}"
+FORCE_PULL=false
+IMAGE_NAME="${PI_BOX_IMAGE:-ghcr.io/breeze833/pi-box:latest}"
 
 usage() {
     cat << "EOF_USAGE"
@@ -19,8 +20,9 @@ host user file permissions and persistent state.
 Options:
   -w, --workdir <DIR>    Set persistent directory scope containing "pi-agent" and "workspace"
                          (default: current working directory)
-  -b, --build            Build or rebuild the container image before running
-  -i, --image <NAME>     Custom container image name (default: pi-box:latest)
+  -p, --pull             Pull the latest container image from registry
+  -b, --build            Build container image locally from Dockerfile
+  -i, --image <NAME>     Custom container image name (default: ghcr.io/breeze833/pi-box:latest)
   -h, --help             Show this help message and exit
 
 Environment Variables:
@@ -45,6 +47,10 @@ while [[ $# -gt 0 ]]; do
             fi
             WORKDIR="$2"
             shift 2
+            ;;
+        -p|--pull)
+            FORCE_PULL=true
+            shift
             ;;
         -b|--build)
             FORCE_BUILD=true
@@ -90,15 +96,28 @@ WORKSPACE_DIR="${WORKDIR}/workspace"
 # Ensure subfolders exist
 mkdir -p "$PI_AGENT_DIR" "$WORKSPACE_DIR"
 
-# Build image if requested or if it doesn't exist locally
+# Check if image exists locally
 IMAGE_EXISTS=false
 if "$CONTAINER_BIN" image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
     IMAGE_EXISTS=true
 fi
 
-if [[ "$FORCE_BUILD" = true ]] || [[ "$IMAGE_EXISTS" = false ]]; then
+# Build, pull, or auto-fetch image
+if [[ "$FORCE_BUILD" = true ]]; then
     echo "Building container image '$IMAGE_NAME' from '$SCRIPT_DIR'..."
     "$CONTAINER_BIN" build -t "$IMAGE_NAME" -f "${SCRIPT_DIR}/Dockerfile" "$SCRIPT_DIR"
+elif [[ "$FORCE_PULL" = true ]]; then
+    echo "Pulling latest container image '$IMAGE_NAME' from registry..."
+    "$CONTAINER_BIN" pull "$IMAGE_NAME"
+elif [[ "$IMAGE_EXISTS" = false ]]; then
+    echo "Image '$IMAGE_NAME' not found locally. Pulling from registry..."
+    if ! "$CONTAINER_BIN" pull "$IMAGE_NAME"; then
+        echo "Error: Failed to pull '$IMAGE_NAME' from registry." >&2
+        if [[ -f "${SCRIPT_DIR}/Dockerfile" ]]; then
+            echo "Tip: You can build it locally using: $0 --build" >&2
+        fi
+        exit 1
+    fi
 fi
 
 # Prepare environment variable arguments

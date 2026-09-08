@@ -63,7 +63,7 @@ Run the launcher script:
 pi-box.cmd
 ```
 
-On first run, the launcher automatically builds the local container image, verifies or creates the `pi-agent/` and `workspace/` directories, and drops you into the Pi TUI.
+On first run, the launcher automatically pulls the pre-built image (`ghcr.io/breeze833/pi-box:latest`), verifies or creates the `pi-agent/` and `workspace/` directories, and drops you into the Pi TUI.
 
 ---
 
@@ -79,12 +79,24 @@ You can store the persistent state and workspace inside any folder on your host 
 
 This will ensure `/path/to/my-project/pi-agent` and `/path/to/my-project/workspace` exist and mount them into the container.
 
-### Force Image Rebuild
+### Pull the Latest Image
 
-To rebuild the Docker image after modifying `Dockerfile`:
+To update to the newest published container image from GitHub Container Registry:
+
+```bash
+./pi-box.sh --pull
+# or on Windows:
+pi-box.cmd --pull
+```
+
+### Build Image Locally
+
+To build or rebuild the container image locally from `Dockerfile` instead of using the registry:
 
 ```bash
 ./pi-box.sh --build
+# or on Windows:
+pi-box.cmd --build
 ```
 
 ### Pass Additional CLI Arguments to Pi
